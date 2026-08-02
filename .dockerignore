@@ -1,0 +1,25 @@
+# Virtual environments
+.venv/
+
+# Python caches
+__pycache__/
+*.py[oc]
+*.egg-info/
+build/
+dist/
+wheels/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Docs (not needed at runtime)
+README.md
