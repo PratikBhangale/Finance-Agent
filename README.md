@@ -15,6 +15,7 @@ An AI-powered **Equity Research Analyst** agent built with [Google's Agent Devel
   - [2. Configure Google Cloud / Vertex AI credentials](#2-configure-google-cloud--vertex-ai-credentials)
   - [3. Environment variables](#3-environment-variables)
 - [Running the Server](#running-the-server)
+- [Deployment](#deployment)
 - [Authentication & Trust Model](#authentication--trust-model)
   - [Shared secret (`X-Internal-Secret`)](#shared-secret-x-internal-secret)
   - [Verified user identity (`X-User-Email`)](#verified-user-identity-x-user-email)
@@ -207,7 +208,27 @@ INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
 
 ---
 
+## Deployment
+
+Deploy the service to Cloud Run directly from source using the `gcloud` CLI:
+
+```bash
+gcloud run deploy finance-agent --source . --project finance-ai-498921 --region us-central1 --service-account 786046409707-compute@developer.gserviceaccount.com --no-allow-unauthenticated --min-instances 0 --max-instances 1 --set-secrets AGENT_INTERNAL_SECRET=AGENT_INTERNAL_SECRET:latest --set-env-vars GOOGLE_GENAI_USE_ENTERPRISE=1,GOOGLE_CLOUD_PROJECT=finance-ai-498921,GOOGLE_CLOUD_LOCATION=global,ALLOWED_ORIGIN=http://localhost:3000
+```
+
+Notes on this command:
+
+- `--source .` builds the container image directly from the repository (using the included `Dockerfile`) and deploys it, without requiring a separate build/push step.
+- `--service-account` sets the runtime service account used to call Vertex AI and access Secret Manager.
+- `--no-allow-unauthenticated` keeps the service private, relying on Cloud Run IAM (see [Cloud Run IAM (deployment-only)](#cloud-run-iam-deployment-only)) in addition to the shared secret.
+- `--min-instances 1 --max-instances 1` pins the service to a single instance, required because session state is kept in-memory (see [Notes & Limitations](#notes--limitations)).
+- `--set-secrets AGENT_INTERNAL_SECRET=AGENT_INTERNAL_SECRET:latest` injects the shared secret from Secret Manager (secret name `AGENT_INTERNAL_SECRET`, latest version) as the `AGENT_INTERNAL_SECRET` environment variable.
+- `--set-env-vars` configures Vertex AI usage (`GOOGLE_GENAI_USE_ENTERPRISE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`) and the allowed CORS origin for the deployed environment — update `ALLOWED_ORIGIN` and the project/region flags to match your own GCP project and frontend origin.
+
+---
+
 ## Authentication & Trust Model
+
 
 This agent is designed to be called **only by the Finance_UI Next.js backend** (a trusted BFF / server-side proxy), never directly by a browser. Finance_UI authenticates end users itself (Google OAuth + a Firestore allowlist) and then forwards two trusted headers on every proxied request.
 
